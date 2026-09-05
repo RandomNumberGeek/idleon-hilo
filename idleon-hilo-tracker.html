@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idleon Hi-Lo Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #EDF1EF;
+    --surface: #FFFFFF;
+    --surface-2: #E1E8E5;
+    --ink: #16211F;
+    --ink-2: #4B5957;
+    --ink-3: #7B8A86;
+    --line: #C9D3CF;
+    --hi: #B04E17;
+    --hi-bg: #F2DFD0;
+    --lo: #1D6674;
+    --lo-bg: #D3E4E7;
+    --gold: #8E7112;
+    --gold-bg: #EDE5C8;
+    --shadow: 0 1px 2px rgba(20,35,33,.08), 0 8px 24px -12px rgba(20,35,33,.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0F1918;
+      --surface: #182524;
+      --surface-2: #21302E;
+      --ink: #E9F0ED;
+      --ink-2: #A9B7B3;
+      --ink-3: #7B8A86;
+      --line: #2C3E3B;
+      --hi: #EE8F4E;
+      --hi-bg: #38240F;
+      --lo: #5EBDCC;
+      --lo-bg: #0F2E33;
+      --gold: #D9B453;
+      --gold-bg: #2E2812;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0F1918;
+    --surface: #182524;
+    --surface-2: #21302E;
+    --ink: #E9F0ED;
+    --ink-2: #A9B7B3;
+    --ink-3: #7B8A86;
+    --line: #2C3E3B;
+    --hi: #EE8F4E;
+    --hi-bg: #38240F;
+    --lo: #5EBDCC;
+    --lo-bg: #0F2E33;
+    --gold: #D9B453;
+    --gold-bg: #2E2812;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  img { max-width: 100%; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 28px 20px 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* ---------- masthead ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 {
+    font-family: "Zilla Slab", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(26px, 4vw, 36px);
+    letter-spacing: -.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .rulebar {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: .04em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .rulebar b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---------- verdict ---------- */
+  .verdict {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .verdict-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px 16px;
+    flex-wrap: wrap;
+  }
+  .card-face {
+    width: 62px;
+    height: 86px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    display: grid;
+    place-items: center;
+    font-family: "Zilla Slab", Georgia, serif;
+    font-weight: 700;
+    font-size: 34px;
+    line-height: 1;
+    flex: none;
+    color: var(--ink);
+  }
+  .card-face.empty { color: var(--ink-3); font-size: 13px; font-family: "IBM Plex Mono", monospace; text-align: center; padding: 0 6px; }
+  .verdict-copy { flex: 1 1 240px; min-width: 0; }
+  .verdict-label {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+  }
+  .verdict-call {
+    font-family: "Zilla Slab", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(30px, 6vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -.015em;
+    margin: 2px 0 2px;
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  .verdict-call .pct { font-family: "IBM Plex Mono", monospace; font-size: .55em; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .call-hi { color: var(--hi); }
+  .call-lo { color: var(--lo); }
+  .call-flat { color: var(--gold); }
+  .verdict-note { font-size: 13.5px; color: var(--ink-2); }
+  .lock {
+    display: inline-block; margin-left: 8px; vertical-align: 2px;
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    background: var(--gold-bg); color: var(--gold);
+    padding: 3px 7px; border-radius: 4px;
+  }
+
+  /* odds bars */
+  .odds { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+  .odd { background: var(--surface); padding: 13px 20px 15px; }
+  .odd-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .odd-name { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+  .odd-val { font-family: "IBM Plex Mono", monospace; font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .odd-hi .odd-name, .odd-hi .odd-val { color: var(--hi); }
+  .odd-lo .odd-name, .odd-lo .odd-val { color: var(--lo); }
+  .track { height: 7px; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .odd-hi .track { background: var(--hi-bg); }
+  .odd-lo .track { background: var(--lo-bg); }
+  .fill { height: 100%; border-radius: 4px; transition: width .18s ease; }
+  .odd-hi .fill { background: var(--hi); }
+  .odd-lo .fill { background: var(--lo); }
+  .odd-math {
+    margin-top: 7px;
+    font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- rank grid ---------- */
+  .panel { display: flex; flex-direction: column; gap: 10px; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h2 {
+    font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: 0;
+  }
+  .hint { font-size: 12.5px; color: var(--ink-3); }
+  kbd {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+    padding: 1px 4px; color: var(--ink-2); background: var(--surface);
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 7px; }
+  .rank {
+    appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 4px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    cursor: pointer;
+    color: var(--ink);
+    transition: transform .1s ease, border-color .12s ease, background .12s ease;
+  }
+  .rank:hover:not(:disabled) { border-color: var(--ink-3); transform: translateY(-1px); }
+  .rank:active:not(:disabled) { transform: translateY(0); }
+  .rank:focus-visible { outline: 2px solid var(--hi); outline-offset: 2px; }
+  .rank:disabled { cursor: not-allowed; opacity: .38; }
+  .rank-glyph { font-family: "Zilla Slab", Georgia, serif; font-weight: 700; font-size: 21px; line-height: 1; }
+  .pips { display: flex; gap: 3px; }
+  .pip { width: 7px; height: 7px; border-radius: 2px; background: var(--surface-2); border: 1px solid var(--line); }
+  .pip.on { background: var(--ink-2); border-color: var(--ink-2); }
+  .rank.is-higher .rank-glyph { color: var(--hi); }
+  .rank.is-lower .rank-glyph { color: var(--lo); }
+  .rank.is-tie .rank-glyph { color: var(--gold); }
+  .rank.is-current { border-color: var(--ink); border-width: 2px; padding: 8px 3px 7px; }
+
+  /* ---------- history ---------- */
+  .strip {
+    display: flex; align-items: center; gap: 6px;
+    overflow-x: auto; padding-bottom: 4px; min-height: 34px;
+  }
+  .chip {
+    flex: none;
+    font-family: "Zilla Slab", Georgia, serif; font-weight: 700; font-size: 14px;
+    min-width: 26px; text-align: center;
+    padding: 3px 6px; border-radius: 5px;
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .chip.last { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .strip-empty { font-size: 13px; color: var(--ink-3); }
+
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    appearance: none; cursor: pointer;
+    font-family: "IBM Plex Sans", sans-serif; font-size: 13px; font-weight: 500;
+    padding: 7px 13px; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    transition: border-color .12s ease;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--ink-3); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--hi); outline-offset: 2px; }
+
+  .footnote {
+    font-size: 12.5px; color: var(--ink-3);
+    border-top: 1px solid var(--line); padding-top: 14px;
+    max-width: 66ch;
+  }
+  .footnote code { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-2); }
+
+  @media (max-width: 520px) {
+    .odds { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Idleon Hi-Lo Tracker</h1>
+    <div class="rulebar">52 cards &middot; 2 low &rarr; A high &middot; <b>ties win both ways</b></div>
+  </header>
+
+  <section class="verdict" aria-live="polite">
+    <div class="verdict-head">
+      <div class="card-face" id="face">9</div>
+      <div class="verdict-copy">
+        <div class="verdict-label">Call</div>
+        <div class="verdict-call" id="call"></div>
+        <div class="verdict-note" id="note"></div>
+      </div>
+    </div>
+    <div class="odds">
+      <div class="odd odd-hi">
+        <div class="odd-top"><span class="odd-name">Higher</span><span class="odd-val" id="hiVal">—</span></div>
+        <div class="track"><div class="fill" id="hiFill" style="width:0%"></div></div>
+        <div class="odd-math" id="hiMath"></div>
+      </div>
+      <div class="odd odd-lo">
+        <div class="odd-top"><span class="odd-name">Lower</span><span class="odd-val" id="loVal">—</span></div>
+        <div class="track"><div class="fill" id="loFill" style="width:0%"></div></div>
+        <div class="odd-math" id="loMath"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Click the card that just flipped</h2>
+      <div class="hint">Or type it: <kbd>2</kbd>–<kbd>9</kbd>, <kbd>0</kbd> for 10, <kbd>J</kbd> <kbd>Q</kbd> <kbd>K</kbd> <kbd>A</kbd>, <kbd>Backspace</kbd> undo</div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Cards seen &mdash; <span id="left"></span></h2>
+      <div class="controls">
+        <button class="btn" id="undo">Undo</button>
+        <button class="btn" id="reset">New deck</button>
+      </div>
+    </div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <p class="footnote">
+    Every rank still in the deck counts. A tie pays out on either call, so the odds on the two
+    sides sum to more than 100% by exactly the chance of pairing the current card
+    (<code>P(hi) + P(lo) = 1 + P(tie)</code>). That also means a 2 on the table is a free Higher and an
+    Ace is a free Lower &mdash; no card in the deck can beat you.
+  </p>
+</div>
+
+<script>
+(function () {
+  var LABELS = { 11: "J", 12: "Q", 13: "K", 14: "A" };
+  var RANKS = [2,3,4,5,6,7,8,9,10,11,12,13,14];
+  var KEYS = { "2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"0":10,"j":11,"q":12,"k":13,"a":14 };
+
+  // Opens on a sample hand so the odds panel is live on arrival; "New deck" clears it.
+  var seen = [13, 4, 9];
+
+  function label(r) { return LABELS[r] || String(r); }
+
+  function state() {
+    var counts = {};
+    RANKS.forEach(function (r) { counts[r] = 4; });
+    seen.forEach(function (r) { counts[r] -= 1; });
+
+    var current = seen.length ? seen[seen.length - 1] : null;
+    var above = 0, below = 0, tie = 0, left = 0;
+    RANKS.forEach(function (r) {
+      var n = counts[r];
+      left += n;
+      if (current === null) return;
+      if (r > current) above += n; else if (r < current) below += n; else tie += n;
+    });
+    return { counts: counts, current: current, above: above, below: below, tie: tie, left: left };
+  }
+
+  var face = document.getElementById("face");
+  var call = document.getElementById("call");
+  var note = document.getElementById("note");
+  var hiVal = document.getElementById("hiVal"), loVal = document.getElementById("loVal");
+  var hiFill = document.getElementById("hiFill"), loFill = document.getElementById("loFill");
+  var hiMath = document.getElementById("hiMath"), loMath = document.getElementById("loMath");
+  var grid = document.getElementById("grid");
+  var strip = document.getElementById("strip");
+  var leftEl = document.getElementById("left");
+  var undoBtn = document.getElementById("undo");
+
+  var buttons = RANKS.map(function (r) {
+    var b = document.createElement("button");
+    b.className = "rank";
+    b.type = "button";
+    b.innerHTML = '<span class="rank-glyph">' + label(r) + '</span><span class="pips">' +
+      '<i class="pip"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i></span>';
+    b.addEventListener("click", function () { draw(r); });
+    grid.appendChild(b);
+    return b;
+  });
+
+  function pct(n) { return (n * 100).toFixed(1) + "%"; }
+
+  function render() {
+    var s = state();
+
+    // rank grid
+    RANKS.forEach(function (r, i) {
+      var b = buttons[i];
+      var n = s.counts[r];
+      b.disabled = n === 0;
+      b.className = "rank" +
+        (s.current === null ? "" :
+          r > s.current ? " is-higher" : r < s.current ? " is-lower" : " is-tie") +
+        (r === s.current ? " is-current" : "");
+      b.setAttribute("aria-label", label(r) + ", " + n + " left");
+      var pips = b.querySelectorAll(".pip");
+      for (var k = 0; k < 4; k++) pips[k].className = "pip" + (k < n ? " on" : "");
+    });
+
+    // history strip
+    strip.innerHTML = "";
+    if (!seen.length) {
+      var e = document.createElement("span");
+      e.className = "strip-empty";
+      e.textContent = "Nothing drawn yet — click the card showing on the table to start.";
+      strip.appendChild(e);
+    } else {
+      seen.forEach(function (r, i) {
+        var c = document.createElement("span");
+        c.className = "chip" + (i === seen.length - 1 ? " last" : "");
+        c.textContent = label(r);
+        strip.appendChild(c);
+      });
+      strip.scrollLeft = strip.scrollWidth;
+    }
+    leftEl.textContent = s.left + " of 52 left in deck";
+    undoBtn.disabled = seen.length === 0;
+
+    // verdict
+    if (s.current === null) {
+      face.className = "card-face empty";
+      face.textContent = "no card";
+      call.innerHTML = '<span class="call-flat">Waiting</span>';
+      note.textContent = "Pick the rank of the card currently face-up.";
+      hiVal.textContent = loVal.textContent = "—";
+      hiFill.style.width = loFill.style.width = "0%";
+      hiMath.textContent = loMath.textContent = "";
+      return;
+    }
+
+    face.className = "card-face";
+    face.textContent = label(s.current);
+
+    if (s.left === 0) {
+      call.innerHTML = '<span class="call-flat">Deck empty</span>';
+      note.textContent = "All 52 cards are accounted for. Start a new deck.";
+      hiVal.textContent = loVal.textContent = "—";
+      hiFill.style.width = loFill.style.width = "0%";
+      hiMath.textContent = loMath.textContent = "";
+      return;
+    }
+
+    var pHi = (s.above + s.tie) / s.left;
+    var pLo = (s.below + s.tie) / s.left;
+
+    hiVal.textContent = pct(pHi);
+    loVal.textContent = pct(pLo);
+    hiFill.style.width = (pHi * 100).toFixed(2) + "%";
+    loFill.style.width = (pLo * 100).toFixed(2) + "%";
+    hiMath.textContent = (s.above + s.tie) + "/" + s.left + "  =  " + s.above + " above + " + s.tie + " tie";
+    loMath.textContent = (s.below + s.tie) + "/" + s.left + "  =  " + s.below + " below + " + s.tie + " tie";
+
+    var best, cls, p;
+    if (s.above === s.below) { best = "Coin flip"; cls = "call-flat"; p = pHi; }
+    else if (s.above > s.below) { best = "Higher"; cls = "call-hi"; p = pHi; }
+    else { best = "Lower"; cls = "call-lo"; p = pLo; }
+
+    var locked = (best === "Higher" && s.below === 0) || (best === "Lower" && s.above === 0);
+    call.innerHTML = '<span class="' + cls + '">' + best + '</span><span class="pct">' + pct(p) +
+      (locked ? '<span class="lock">guaranteed</span>' : '') + '</span>';
+
+    if (best === "Coin flip") {
+      note.textContent = "Identical either way — " + s.above + " above and " + s.below +
+        " below, with " + s.tie + " tie card" + (s.tie === 1 ? "" : "s") + " paying both sides.";
+    } else {
+      var edge = Math.abs(pHi - pLo) * 100;
+      note.textContent = "Edge of " + edge.toFixed(1) + " points over the other call. " +
+        s.above + " card" + (s.above === 1 ? "" : "s") + " above, " + s.below + " below, " +
+        s.tie + " tie.";
+    }
+  }
+
+  function draw(r) {
+    if (state().counts[r] <= 0) return;
+    seen.push(r);
+    render();
+  }
+
+  document.getElementById("undo").addEventListener("click", function () {
+    seen.pop(); render();
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    seen = []; render();
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var t = ev.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    if (ev.key === "Backspace") { ev.preventDefault(); seen.pop(); render(); return; }
+    var k = KEYS[ev.key.toLowerCase()];
+    if (k) { ev.preventDefault(); draw(k); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
